@@ -22,12 +22,25 @@ class AdsHub:
     def __init__(self, ads_client):
         """Initialize the ADS hub."""
         self._client = ads_client
-        self._client.open()
+        self._connect()
 
         # All ADS devices are registered here
         self._devices = []
         self._notification_items = {}
         self._lock = threading.Lock()
+
+    def _connect(self):
+        """Establish ADS connection if not already open."""
+        if not self._client.is_open:
+            try:
+                self._client.open()
+            except pyads.ADSError as err:
+                _LOGGER.error("Failed to connect to ADS device: %s", err)
+
+    def _reconnect(self):
+        """Attempt to reconnect ADS connection."""
+        with self._lock:
+            self._connect()
 
     def shutdown(self, *args, **kwargs):
         """Shutdown ADS connection."""
@@ -58,6 +71,8 @@ class AdsHub:
         """Write a value to the device."""
 
         with self._lock:
+            if not self._client.is_open:
+                self._reconnect()
             try:
                 return self._client.write_by_name(name, value, plc_datatype)
             except pyads.ADSError as err:
@@ -67,6 +82,8 @@ class AdsHub:
         """Read a value from the device."""
 
         with self._lock:
+            if not self._client.is_open:
+                self._reconnect()
             try:
                 return self._client.read_by_name(name, plc_datatype)
             except pyads.ADSError as err:
@@ -78,6 +95,8 @@ class AdsHub:
         attr = pyads.NotificationAttrib(ctypes.sizeof(plc_datatype))
 
         with self._lock:
+            if not self._client.is_open:
+                self._reconnect()
             try:
                 hnotify, huser = self._client.add_device_notification(
                     name, attr, self._device_notification_callback
