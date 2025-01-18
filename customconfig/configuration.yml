@@ -1,0 +1,11 @@
+default_config:
+
+ads:
+  device: "10.0.10.10.1.1"
+  port: 851
+  ip_address: 10.0.10.10
+
+switch:
+  - platform: ads
+    adsvar: MAIN.bOutput
+    name: "Output"
